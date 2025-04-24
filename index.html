@@ -172,24 +172,46 @@
   <!-- Pulsante per modificare la pagina -->
   <button id="edit-btn"><i class="fas fa-pencil-alt"></i></button>
 
+  <!-- Aggiungi le librerie Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+
   <script>
+    // Configurazione di Firebase (copiata dalla console Firebase)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAJUmDWqe2ScAIx9NeJzfqD7X9BqoqNsfs",
+      authDomain: "live-sgiustina.firebaseapp.com",
+      projectId: "live-sgiustina",
+      storageBucket: "live-sgiustina.firebasestorage.app",
+      messagingSenderId: "1010218008808",
+      appId: "1:1010218008808:web:2990c52343ef54801d495d"
+    };
+
+    // Inizializza Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(app);
+
     let partite = [];
     const stats = {};
     let isEditable = false; // Flag per abilitare/disabilitare la modifica
 
-    // Funzione per caricare i dati dal LocalStorage
+    // Funzione per caricare i dati dal database Firebase
     function caricaDati() {
-      const datiSalvati = localStorage.getItem('partite');
-      if (datiSalvati) {
-        partite = JSON.parse(datiSalvati);
-        aggiornaTabellone();
-        aggiornaClassifica();
-      }
+      const ref = db.ref('partite'); // Il percorso 'partite' nel database
+      ref.once('value', (snapshot) => {
+        const data = snapshot.val(); // Ottieni i dati dal database
+        if (data) {
+          partite = data;
+          aggiornaTabellone();  // Aggiorna il tabellone delle partite
+          aggiornaClassifica(); // Aggiorna la classifica
+        }
+      });
     }
 
-    // Funzione per salvare i dati nel LocalStorage
+    // Funzione per salvare i dati nel database Firebase
     function salvaDati() {
-      localStorage.setItem('partite', JSON.stringify(partite));
+      const ref = db.ref('partite'); // Percorso 'partite' nel database
+      ref.set(partite); // Salva l'array delle partite nel database
     }
 
     // Rimuoviamo la protezione password per il pulsante con la stella
@@ -229,7 +251,7 @@
 
       aggiornaTabellone();
       aggiornaClassifica();
-      salvaDati(); // Salviamo i dati nel LocalStorage
+      salvaDati(); // Ora salva i dati in Firebase
       this.reset();
     });
 
@@ -271,7 +293,7 @@
       if (index !== null && field && partite[index]) {
         partite[index][field] = nuovoValore;
         aggiornaClassifica();
-        salvaDati(); // Salviamo i dati nel LocalStorage
+        salvaDati(); // Salviamo i dati nel Firebase
       }
     }
 
@@ -295,51 +317,41 @@
         stats[team2].pg += 1;
 
         stats[team1].gf += g1;
-        stats[team1].gs += g2;
         stats[team2].gf += g2;
+        stats[team1].gs += g2;
         stats[team2].gs += g1;
 
-        if (g1 > g2) stats[team1].punti += 3;
-        else if (g2 > g1) stats[team2].punti += 3;
-        else {
+        if (g1 > g2) {
+          stats[team1].punti += 3;
+        } else if (g1 < g2) {
+          stats[team2].punti += 3;
+        } else {
           stats[team1].punti += 1;
           stats[team2].punti += 1;
         }
       });
 
-      // Rimuove le squadre non più presenti nel tabellone
-      Object.keys(stats).forEach(squadra => {
-        const isInTabellone = partite.some(p => p.team1 === squadra || p.team2 === squadra);
-        if (!isInTabellone) {
-          delete stats[squadra];
-        }
-      });
-
-      const classifica = Object.entries(stats).sort((a, b) => {
-        if (b[1].punti !== a[1].punti) return b[1].punti - a[1].punti;
-        const diffA = a[1].gf - a[1].gs;
-        const diffB = b[1].gf - b[1].gs;
-        return diffB - diffA;
-      });
+      const classifica = Object.entries(stats).map(([squadra, data]) => {
+        return { squadra, ...data, diff: data.gf - data.gs };
+      }).sort((a, b) => b.punti - a.punti || b.diff - a.diff);
 
       const tbody = document.querySelector('#classifica tbody');
       tbody.innerHTML = '';
-      for (let [squadra, dati] of classifica) {
+      classifica.forEach(s => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${squadra}</td>
-          <td>${dati.pg}</td>
-          <td>${dati.punti}</td>
-          <td>${dati.gf}</td>
-          <td>${dati.gs}</td>
-          <td>${dati.gf - dati.gs}</td>
+          <td>${s.squadra}</td>
+          <td>${s.pg}</td>
+          <td>${s.punti}</td>
+          <td>${s.gf}</td>
+          <td>${s.gs}</td>
+          <td>${s.diff}</td>
         `;
         tbody.appendChild(tr);
-      }
+      });
     }
 
-    // Carica i dati quando la pagina è pronta
-    window.onload = caricaDati;
+    caricaDati(); // Carica i dati all'avvio
   </script>
 
 </body>
