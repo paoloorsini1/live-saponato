@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>calcetto saponato santa giustina</title>
+  <title>Classifica Dinamica Serie A</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     body {
@@ -177,6 +177,21 @@
     const stats = {};
     let isEditable = false; // Flag per abilitare/disabilitare la modifica
 
+    // Funzione per caricare i dati dal LocalStorage
+    function caricaDati() {
+      const datiSalvati = localStorage.getItem('partite');
+      if (datiSalvati) {
+        partite = JSON.parse(datiSalvati);
+        aggiornaTabellone();
+        aggiornaClassifica();
+      }
+    }
+
+    // Funzione per salvare i dati nel LocalStorage
+    function salvaDati() {
+      localStorage.setItem('partite', JSON.stringify(partite));
+    }
+
     // Rimuoviamo la protezione password per il pulsante con la stella
     document.getElementById('show-form-btn').addEventListener('click', function() {
       document.getElementById('match-form').style.display = 'grid';
@@ -214,6 +229,7 @@
 
       aggiornaTabellone();
       aggiornaClassifica();
+      salvaDati(); // Salviamo i dati nel LocalStorage
       this.reset();
     });
 
@@ -255,6 +271,7 @@
       if (index !== null && field && partite[index]) {
         partite[index][field] = nuovoValore;
         aggiornaClassifica();
+        salvaDati(); // Salviamo i dati nel LocalStorage
       }
     }
 
@@ -320,6 +337,9 @@
         tbody.appendChild(tr);
       }
     }
+
+    // Carica i dati quando la pagina è pronta
+    window.onload = caricaDati;
   </script>
 
 </body>
