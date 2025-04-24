@@ -114,6 +114,15 @@
       background-color: #f0f0f0;
     }
 
+    #edit-btn i {
+      margin-right: 0;
+    }
+
+    /* Pulsante con la stella visibile solo se la modalità di modifica è attivata */
+    #show-form-btn {
+      display: none; /* Nascondiamo inizialmente */
+    }
+
   </style>
 </head>
 <body>
@@ -168,13 +177,27 @@
     const stats = {};
     let isEditable = false; // Flag per abilitare/disabilitare la modifica
 
+    // Rimuoviamo la protezione password per il pulsante con la stella
     document.getElementById('show-form-btn').addEventListener('click', function() {
-      const password = prompt('Inserisci la password per accedere al modulo:');
-      if (password === 'paolo') {
-        document.getElementById('match-form').style.display = 'grid';
-        document.getElementById('show-form-btn').style.display = 'none';
+      document.getElementById('match-form').style.display = 'grid';
+      document.getElementById('show-form-btn').style.display = 'none';
+    });
+
+    // Funzione per attivare/disattivare la modifica della pagina con password per il pulsante con la matita
+    document.getElementById('edit-btn').addEventListener('click', function() {
+      if (!isEditable) {
+        const password = prompt('Inserisci la password per modificare la pagina:');
+        if (password === 'paolo') {
+          isEditable = true;
+          document.getElementById('show-form-btn').style.display = 'inline-block'; // Rendi visibile il pulsante con la stella
+          alert('Modalità di modifica attivata!');
+        } else {
+          alert('Password errata!');
+        }
       } else {
-        alert('Password errata!');
+        isEditable = false;
+        document.getElementById('show-form-btn').style.display = 'none'; // Nascondi il pulsante con la stella
+        alert('Modalità di modifica disattivata!');
       }
     });
 
@@ -189,32 +212,12 @@
 
       partite.push({ team1, score1, score2, team2, time });
 
-      if (score1 !== '-' && score2 !== '-') {
-        aggiornaClassifica();
-      }
-
       aggiornaTabellone();
+      aggiornaClassifica();
       this.reset();
     });
 
-    // Funzione per attivare/disattivare la modifica della pagina
-    document.getElementById('edit-btn').addEventListener('click', function() {
-      if (!isEditable) {
-        const password = prompt('Inserisci la password per modificare la pagina:');
-        if (password === 'paolo') {
-          isEditable = true;
-          document.getElementById('show-form-btn').style.display = 'inline-block';
-          alert('Modalità di modifica attivata!');
-        } else {
-          alert('Password errata!');
-        }
-      } else {
-        isEditable = false;
-        document.getElementById('show-form-btn').style.display = 'none';
-        alert('Modalità di modifica disattivata!');
-      }
-    });
-
+    // Funzione per aggiornare il tabellone delle partite
     function aggiornaTabellone() {
       const tbody = document.querySelector('#match-table tbody');
       tbody.innerHTML = '';
@@ -243,6 +246,7 @@
       });
     }
 
+    // Funzione per aggiornare il campo modificato
     function aggiornaCampo(e) {
       const index = e.target.getAttribute('data-index');
       const field = e.target.getAttribute('data-field');
@@ -250,12 +254,11 @@
 
       if (index !== null && field && partite[index]) {
         partite[index][field] = nuovoValore;
-        if (partite[index].score1 !== '-' && partite[index].score2 !== '-') {
-          aggiornaClassifica();
-        }
+        aggiornaClassifica();
       }
     }
 
+    // Funzione per aggiornare la classifica
     function aggiornaClassifica() {
       for (let key in stats) {
         stats[key] = { punti: 0, gf: 0, gs: 0, pg: 0 };
@@ -284,6 +287,14 @@
         else {
           stats[team1].punti += 1;
           stats[team2].punti += 1;
+        }
+      });
+
+      // Rimuove le squadre non più presenti nel tabellone
+      Object.keys(stats).forEach(squadra => {
+        const isInTabellone = partite.some(p => p.team1 === squadra || p.team2 === squadra);
+        if (!isInTabellone) {
+          delete stats[squadra];
         }
       });
 
